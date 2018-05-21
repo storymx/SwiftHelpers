@@ -1,207 +1,224 @@
 //
 //  NWService.swift
-//  APNSTest
+//  WebServices
 //
 //  Created by Gabriel Jaramillo on 5/20/18.
 //  Copyright © 2018 Gabriel Jaramillo. All rights reserved.
 //
 
 import Foundation
+
 class NWService: NSObject {
     
     private override init(){}
-    static let shared  = NWService()
+    static let shared = NWService()
     
     func makeGETCall(url: String){
         
-        //Creating the URL from received String
+        //retrieving url String, creating URL based on url param
         guard let endPoint = URL(string: url) else {
-            print("Error converting your String into a URL.")
+            print("Error parsing string to URL")
             return
         }
         
+        //Creating our Request based on URL variable, setting up headers and Call Method
         var urlRequest = URLRequest(url: endPoint)
         urlRequest.httpMethod = "GET"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        //BODY most of GET calls do not include any specific content Body, if your GET Call includes one..
-        //you can follow the steps of makePOSTCall
+        //Setting our SessionConfiguration and our Session
+        let configuration = URLSessionConfiguration.default
+        let session = URLSession(configuration: configuration)
         
-        //Configuring HTTPCall
-        let config = URLSessionConfiguration.default
-        let session = URLSession(configuration: config)
-        
-        
-            //Executing the Call and Parsing your JSON
-            let task = session.dataTask(with: urlRequest) { (data, request, error) in
-                
-                //checking if your call has an error
-                if error != nil && data == nil {
-                    print("Error Executing your HTTP GET Call...")
-                }
-                
-                do {
-                //Parsing your JSON Data from Server
-                    let jsonResponse = try JSONSerialization.jsonObject(with: data!, options: .mutableContainers) as! [String:AnyObject]
-                    
-                    //Print our your JSON Call from Server
-                    print("JSON From Server: \(jsonResponse)")
-                    
-                    //Here you can Manage your actions based on your JSON Object, maybecreating models or any other actions...
-                    
-                }catch let error as NSError{
-                    //Print your Error to Console.
-                    print(error.localizedDescription)
-                }
+        //Setting up our sessionDataTask
+        let task = session.dataTask(with: urlRequest) { (data, response, error) in
+            
+            if error != nil && data == nil {
+                print("REQUEST CALL ERROR, Check your logs...")
+                return
             }
             
-            task.resume()
+            //parse JSONResponse from Server
+            do{
+             
+                let jsonResponse = try JSONSerialization.jsonObject(with: data!, options: JSONSerialization.ReadingOptions.mutableContainers) as! NSArray
+        
+                for element in jsonResponse {
+                    
+                    let jsonObject = element as! [String:Any]
+                    
+                    print(jsonObject["body"] as! String)
+                    
+                }
+                
+            }catch let error as NSError{
+                print(error.localizedDescription)
+                
+            }
+            
+        }
+        
+        //RESUME THE TASK
+        task.resume()
+        
+        
     }
     
+    //HTTP POST REQUEST
     func makePOSTCall(url: String){
         
-        //creating the URL for tne End point.
-        guard let endpoint = URL(string: url) else {
-            print("Error creating our endpoint:  \(url) on POSTRequest")
+        //Creating URL Object
+        guard let endPoint = URL(string: url) else {
+            print("Error Creating URL Object")
             return
         }
         
-        //creating our URLRequest, Setting Up the Method Call, and Setting Headers, Authorization Token can also be added here as Header.
-        var urlRequest = URLRequest(url: endpoint)
+        //Creating URLRequest, RequestMethod and RequestHeader
+        var urlRequest = URLRequest(url: endPoint)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        //CREATING BODY PARAMS
-        let contentBody = NSMutableDictionary()
-        contentBody.setValue(1, forKey: "userId")
+        //Creating our BodyParameters to be received in the server
+        let requestBody = NSMutableDictionary()
+        requestBody.setValue("ggabriel_dev post", forKey: "title")
+        requestBody.setValue("This is my first POST Request using Swift!, and im excited to learn more and more of iOS Development using Swift Language!", forKey: "body")
+        requestBody.setValue(1, forKey: "userId")
         
-        let jsonContentBody: Data
-        
-        //Serializing BODY PARAMS
+        //Assigning the BodyParameters as JSON to URLRequest Body
         do{
             
-            jsonContentBody = try JSONSerialization.data(withJSONObject: contentBody, options: JSONSerialization.WritingOptions())
-            urlRequest.httpBody = jsonContentBody
+            let jsonRequestBody = try JSONSerialization.data(withJSONObject: requestBody, options: JSONSerialization.WritingOptions())
+            urlRequest.httpBody = jsonRequestBody
             
-        }catch{
-            print("Error Adding and Parsing bodyContent to JSON")
-            return
+        }catch let error as NSError{
+            print("Error Parsing requestBody to JSONObject: \(error)")
         }
         
-        //configuring the HTTPCall.
-        let config = URLSessionConfiguration.default
-        let session = URLSession(configuration: config)
+        //Creating Configuration, Session and Task for Request Call
+        let configuration = URLSessionConfiguration.default
+        let session = URLSession(configuration: configuration)
         
-        //Executing the Call to Endpoint
-        let task  = session.dataTask(with: urlRequest) { (data, response, error) in
+        //Firing the Request
+        let task = session.dataTask(with: urlRequest) { (data, response, error) in
             
             if error != nil && data == nil {
-                print("error during the request Call, and no data received: ")
-                print("error: \(error)")
+                print("Error during the request call, and no data received!")
+                print("error: \(String(describing: error))")
             }
             
-            guard let contentData = String(data: data!, encoding: String.Encoding.utf8) else {
+            //Here you can also parse your JSONObject from Server, in POST Calls, you will receive 200 code
+            //And Current Updated Object with a message.
+            
+            guard let serverResponse = String(data: data!, encoding: String.Encoding.utf8) else {
+                print("Error parsing Server Response")
                 return
             }
             
-            // Here you can do whatever you want with your Received Data.
+            //Print ServerResponse Out.
+            print(serverResponse)
+            
         }
-     
-        task.resume();
         
+        task.resume()
     }
     
+    //HTTP PUT REQUEST
     func makePUTCall(url: String){
         
-        //creating the URL for tne End point.
-        guard let endpoint = URL(string: url) else {
-            print("Error creating our endpoint:  \(url) on POSTRequest")
+        //Creating URL Object
+        guard let endPoint = URL(string: url) else {
+            print("Error creating URL based on URLString parameter")
             return
         }
         
-        //creating our URLRequest, Setting Up the Method Call, and Setting Headers, Authorization Token can also be added here as Header.
-        var urlRequest = URLRequest(url: endpoint)
+        //Creating URLRequest, RequestMethod and RequestHeader
+        var urlRequest = URLRequest(url: endPoint)
         urlRequest.httpMethod = "PUT"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        //CREATING BODY PARAMS
-        let contentBody = NSMutableDictionary()
-        contentBody.setValue(1, forKey: "userId")
-        contentBody.setValue("Updated Title Field", forKey: "title")
-        contentBody.setValue("Updated Body Field", forKey: "body")
+        //Creating our BodyParameters to be received in the server
+        let requestBody = NSMutableDictionary()
+        requestBody.setValue(1, forKey: "userId")
+        requestBody.setValue("GGabriel_Dev", forKey: "title")
+        requestBody.setValue("UPDATED This is my first POST Request using Swift!, and im excited to learn more and more of iOS Development using Swift Language! ", forKey: "body")
         
-        let jsonContentBody: Data
-        
-        //Serializing BODY PARAMS
+        //Assigning the BodyParameters as JSON to URLRequest Body
         do{
             
-            jsonContentBody = try JSONSerialization.data(withJSONObject: contentBody, options: JSONSerialization.WritingOptions())
-            urlRequest.httpBody = jsonContentBody
+            let jsonRequestBody = try JSONSerialization.data(withJSONObject: requestBody, options: JSONSerialization.WritingOptions())
+            urlRequest.httpBody = jsonRequestBody
             
-        }catch{
-            
-            print("Error Adding and Parsing bodyContent to JSON")
-            return
-            
+        }catch let error as NSError{
+            print("Error creating RequestJSON Body to be sent to the endpoint, Error: \(error)")
         }
         
-        //configuring the HTTPCall.
-        let config = URLSessionConfiguration.default
-        let session = URLSession(configuration: config)
+        //Creating Configuration, Session and Task for Request Call
+        let configuration = URLSessionConfiguration.default
+        let session = URLSession(configuration: configuration)
         
-        //Executing the Call to Endpoint
-        let task  = session.dataTask(with: urlRequest) { (data, response, error) in
+        //Firing the Request
+        let task = session.dataTask(with: urlRequest) { (data, response, error) in
             
             if error != nil && data == nil {
-                print("error during the request Call, and no data received: ")
-                print("error: \(error)")
+                print("Error from Request PUT Call, or No Data received")
             }
             
-            guard let contentData = String(data: data!, encoding: String.Encoding.utf8) else {
+            //Here you can also parse your JSONObject from Server, in PUT or UPDATE Calls, you will receive 200 code
+            //And Current Updated Object with a message.
+            
+            
+            //Printing Server Response
+            guard let serverResponse = String(data: data!, encoding: String.Encoding.utf8)  else {
+                print("Error parsing the Server Response to a String")
                 return
             }
             
-            // Here you can do whatever you want with your Received Data.
+            print("serverResponse: \(serverResponse)")
         }
         
-        task.resume();
+        task.resume()
+        
         
     }
     
+    //HTTP DELETE REQUEST
     func makeDELETECall(url: String){
         
-        
-        //creating the URL for tne End point.
-        guard let endpoint = URL(string: url) else {
-            print("Error creating our endpoint:  \(url) on POSTRequest")
+        //Creating URL Object
+        guard let endPoint = URL(string: url) else {
+            print("Error creating URL based on URLString parameter")
             return
         }
         
-        //creating our URLRequest, Setting Up the Method Call, and Setting Headers, Authorization Token can also be added here as Header.
-        var urlRequest = URLRequest(url: endpoint)
+        //Creating URLRequest, RequestMethod and RequestHeader
+        var urlRequest = URLRequest(url: endPoint)
         urlRequest.httpMethod = "DELETE"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+       
         
-        //configuring the HTTPCall.
-        let config = URLSessionConfiguration.default
-        let session = URLSession(configuration: config)
+        //Creating Configuration, Session and Task for Request Call
+        let configuration = URLSessionConfiguration.default
+        let session = URLSession(configuration: configuration)
         
-        //Executing the Call to Endpoint
-        let task  = session.dataTask(with: urlRequest) { (data, response, error) in
+        let task = session.dataTask(with: urlRequest) { (data, response, error) in
             
             if error != nil && data == nil {
-                print("error during the request Call, and no data received: ")
-                print("error: \(error)")
+                print("Error from Request GET Call, or No Data received")
             }
             
-            guard let contentData = String(data: data!, encoding: String.Encoding.utf8) else {
+            //Here we can convert our Server Response in case we have one, usually in DELETE Calls is just 200 Call and
+            //Message with a successfull Delete
+            
+            //printing Server Response
+            guard let serverResponse = String(data: data!, encoding: String.Encoding.utf8)  else {
+                print("Error parsing the Server Response to a String")
                 return
             }
             
-            // Here you can do whatever you want with your Received Data.
+            print("serverResponse: \(serverResponse)")
         }
         
-        task.resume();
+        task.resume()
         
-    }   
+    }
 }
